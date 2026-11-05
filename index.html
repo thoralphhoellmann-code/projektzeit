@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Projektzeit BR Events</title>
+<meta name="theme-color" content="#0E7A6A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Projektzeit">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>
+:root{
+  color-scheme:light;
+  --bg:#E9EEF2; --surface:#FFFFFF; --ink:#18232D; --muted:#5B6975; --line:#D3DBE2;
+  --pr:#0E7A6A; --pr-soft:#D6EFEA; --ho:#B5770A; --ho-soft:#F6EBD3; --fa:#4A5FA8; --fa-soft:#E1E6F5; --danger:#B3261E; --on:#FFFFFF;
+  --display:-apple-system, "SF Pro Display", "Segoe UI", Roboto, system-ui, sans-serif;
+  --body:-apple-system, "SF Pro Text", "Segoe UI", Roboto, system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    color-scheme:dark;
+    --bg:#121A20; --surface:#1B252D; --ink:#E6EDF2; --muted:#93A2AE; --line:#2C3A45;
+    --pr:#3FC0AB; --pr-soft:#173C37; --ho:#E4A93A; --ho-soft:#3D3019; --fa:#8FA2E8; --fa-soft:#232C4A; --danger:#F08A82; --on:#10171C;
+  }
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+[hidden]{display:none!important}
+main{max-width:760px;margin:0 auto;padding:24px 16px 60px}
+h1{font-family:var(--display);font-weight:700;font-size:1.6rem;margin:0;letter-spacing:-.01em}
+.top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+.sync{font-size:.85rem;color:var(--muted)}
+.sync.warn{color:var(--danger)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+input,select,textarea{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0;width:100%}
+
+.clock{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:22px;position:relative;overflow:hidden}
+.clock::before{content:"";position:absolute;inset:0 auto 0 0;width:6px;background:var(--mode)}
+.clock[data-mode="praesenz"]{--mode:var(--pr)}
+.clock[data-mode="ho"]{--mode:var(--ho)}
+.clock[data-mode="fahrt"]{--mode:var(--fa)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:3px;background:var(--bg)}
+.seg button{border:0;background:transparent;padding:8px 16px;border-radius:999px;font-weight:600;color:var(--muted)}
+.seg button[aria-pressed="true"]{color:var(--on);background:var(--c)}
+.seg .b-pr{--c:var(--pr)} .seg .b-ho{--c:var(--ho)}
+.kseg button{--c:var(--ink)} .kseg .b-fa{--c:var(--fa)}
+.segs{display:flex;gap:10px;flex-wrap:wrap}
+.km{flex:0 1 130px!important}
+.timer{font-family:var(--display);font-weight:500;font-size:clamp(3.2rem,13vw,5.6rem);line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin:22px 0 6px}
+.timer.running{color:var(--mode)}
+.timer.paused{color:var(--muted)}
+.since{color:var(--muted);font-size:.92rem;min-height:1.4em}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.row input{flex:1 1 220px;width:auto}
+.btns{display:flex;gap:10px}
+.go{border:0;border-radius:12px;padding:12px 24px;font-weight:600;background:var(--mode);color:var(--on);font-size:1.02rem}
+.pause{border:1px solid var(--mode);background:transparent;color:var(--mode);border-radius:12px;padding:12px 20px;font-weight:600}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.chips button{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:5px 12px;font-size:.88rem}
+.chips button:disabled{opacity:.5;cursor:default}
+.ghost{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 14px;font-weight:500}
+.ghost:disabled{opacity:.5}
+
+.period{margin-top:34px}
+.phead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.pnav{display:flex;align-items:center;gap:6px}
+.pnav span{min-width:10.5em;text-align:center;font-weight:600}
+.pnav button{border:1px solid var(--line);background:var(--surface);border-radius:8px;width:36px;height:36px}
+.vseg button{padding:6px 14px}
+.vseg button[aria-pressed="true"]{color:var(--on);background:var(--ink)}
+.totals{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px}
+.tot{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.tot .v{font-family:var(--display);font-weight:700;font-size:1.5rem;font-variant-numeric:tabular-nums}
+.tot .l{color:var(--muted);font-size:.85rem}
+.tot .eur{font-variant-numeric:tabular-nums;font-weight:600;font-size:.95rem}
+.tot.pr .v{color:var(--pr)} .tot.ho .v{color:var(--ho)} .tot.fa .v{color:var(--fa)}
+.note{color:var(--muted);font-size:.85rem;margin-top:8px}
+.bar{display:flex;height:10px;border-radius:999px;overflow:hidden;background:var(--line);margin-top:12px}
+.bar i{display:block;height:100%}
+.p{background:var(--pr)} .h{background:var(--ho)} .f{background:var(--fa)}
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-top:18px;align-items:end}
+.wd{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
+.wcol{width:100%;max-width:44px;height:110px;display:flex;flex-direction:column-reverse;background:var(--surface);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.wcol i{display:block;width:100%}
+.wd small{color:var(--muted);font-size:.78rem}
+.wd b{font-size:.8rem;font-variant-numeric:tabular-nums;font-weight:600}
+.exports{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+
+.days{margin-top:10px}
+.day{margin-top:18px}
+.dh{display:flex;justify-content:space-between;color:var(--muted);font-size:.88rem;border-bottom:1px solid var(--line);padding-bottom:4px}
+.dh b{color:var(--ink);font-weight:600}
+.e{display:grid;grid-template-columns:auto 1fr auto auto;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.e.editing{background:var(--surface)}
+.e.billed{opacity:.72}
+.tag{font-size:.78rem;font-weight:600;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.tag.praesenz{background:var(--pr-soft);color:var(--pr)}
+.tag.ho{background:var(--ho-soft);color:var(--ho)}
+.tag.fahrt{background:var(--fa-soft);color:var(--fa)}
+.kind{font-weight:600}
+.what{min-width:0}
+.what div{overflow-wrap:anywhere}
+.what small{color:var(--muted)}
+.dur{font-variant-numeric:tabular-nums;font-weight:600;text-align:right}
+.dur small{display:block;color:var(--muted);font-weight:400;font-size:.78rem}
+.acts{display:flex;gap:2px;flex-wrap:wrap;justify-content:flex-end}
+.acts button{border:0;background:transparent;color:var(--muted);padding:6px 8px;border-radius:8px;font-size:.88rem}
+.acts button:hover{color:var(--ink)}
+.acts .del.armed{color:var(--danger);font-weight:600}
+.acts .bill.on{color:var(--fa);font-weight:600}
+.empty{color:var(--muted);padding:22px 0}
+.dupe{color:var(--danger);font-size:.78rem;margin-left:6px;font-weight:600}
+
+details.box{margin-top:22px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 18px}
+details.box summary{cursor:pointer;font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-top:14px}
+.grid label{display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--muted)}
+.grid .wide{grid-column:1/-1}
+.err{color:var(--danger);font-size:.9rem;min-height:1.3em;margin-top:8px}
+.ok{color:var(--pr);font-size:.9rem;min-height:1.3em;margin-top:8px}
+.formbtns{display:flex;gap:10px;flex-wrap:wrap}
+.dark{--mode:var(--ink)}
+textarea{resize:vertical;min-height:110px}
+.autobox{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding-block:12px}
+.autobox .grid{margin-top:10px}
+.chk{flex-direction:row!important;align-items:center;gap:10px!important;color:var(--ink)!important;font-size:.95rem!important;font-weight:500}
+.chk input{width:20px;height:20px;accent-color:var(--fa)}
+.auto{color:var(--muted);font-size:.78rem;margin-left:6px}
+.billedTag{color:var(--fa);font-size:.78rem;margin-left:6px;font-weight:600}
+.syncbox p{margin:10px 0 0;color:var(--muted);font-size:.9rem}
+.syncbox .formbtns{margin-top:12px}
+@media (max-width:520px){
+  .totals{grid-template-columns:1fr 1fr}
+  .e{grid-template-columns:auto 1fr auto}
+  .acts{grid-column:2/-1;justify-content:flex-end}
+  .btns{width:100%} .btns .go{flex:1}
+}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <h1>Projektzeit BR Events</h1>
+    <span class="sync" id="sync">Wird geladen …</span>
+  </div>
+
+  <section class="clock" id="clock" data-mode="praesenz" aria-label="Stempeluhr">
+    <div class="segs">
+      <div class="seg kseg" role="group" aria-label="Art der Zeit">
+        <button data-k="arbeit" aria-pressed="true">Arbeit</button>
+        <button data-k="telefon" aria-pressed="false">Telefonat</button>
+        <button class="b-fa" data-k="fahrt" aria-pressed="false">Fahrt</button>
+      </div>
+      <div class="seg mseg" id="mseg" role="group" aria-label="Arbeitsort">
+        <button class="b-pr" data-m="praesenz" aria-pressed="true">Präsenz</button>
+        <button class="b-ho" data-m="ho" aria-pressed="false">Homeoffice</button>
+      </div>
+    </div>
+    <div class="timer" id="timer">0:00:00</div>
+    <div class="since" id="since">Bereit zum Starten.</div>
+    <div class="row">
+      <input id="task" list="taskList" placeholder="Woran arbeitest du? (optional)" maxlength="200">
+      <input id="km" class="km" type="number" min="0" step="1" placeholder="Kilometer" aria-label="Gefahrene Kilometer" hidden>
+      <div class="btns">
+        <button class="pause" id="pauseBtn" hidden>Pause</button>
+        <button class="go" id="go">Starten</button>
+      </div>
+    </div>
+    <div class="chips" id="chips" aria-label="Feste Tätigkeiten"></div>
+  </section>
+
+  <section class="period">
+    <div class="phead">
+      <div class="seg vseg" role="group" aria-label="Ansicht">
+        <button data-v="week" aria-pressed="false">Woche</button>
+        <button data-v="month" aria-pressed="true">Monat</button>
+      </div>
+      <div class="pnav">
+        <button id="prev" aria-label="Zurück">‹</button>
+        <span id="plabel"></span>
+        <button id="next" aria-label="Weiter">›</button>
+      </div>
+    </div>
+    <div class="totals">
+      <div class="tot"><div class="v" id="tAll">0:00</div><div class="l">Gesamt</div><div class="eur" id="eAll"></div></div>
+      <div class="tot pr"><div class="v" id="tPr">0:00</div><div class="l">Präsenz</div><div class="eur" id="ePr"></div></div>
+      <div class="tot ho"><div class="v" id="tHo">0:00</div><div class="l">Homeoffice</div><div class="eur" id="eHo"></div></div>
+      <div class="tot fa"><div class="v" id="tFa">0:00</div><div class="l">Fahrt</div><div class="eur" id="eFa"></div></div>
+    </div>
+    <div class="bar" aria-hidden="true"><i class="p" id="bP" style="width:0"></i><i class="h" id="bH" style="width:0"></i><i class="f" id="bF" style="width:0"></i></div>
+    <div class="note" id="knote"></div>
+    <div class="note" id="rnote" hidden></div>
+    <div class="note" id="bnote" hidden></div>
+    <div class="note" id="dnote" hidden></div>
+    <div class="week" id="week" hidden></div>
+    <div class="exports" id="exports">
+      <button class="ghost" id="pdf">Stundenzettel als PDF</button>
+      <button class="ghost" id="pdfDbx" hidden>PDF in Dropbox speichern</button>
+      <button class="ghost" id="csv">Als CSV exportieren</button>
+    </div>
+    <div class="err" id="xErr"></div>
+    <div class="ok" id="xOk"></div>
+    <div class="days" id="days"></div>
+  </section>
+
+  <details class="box" id="add">
+    <summary id="addTitle">Zeit nachtragen</summary>
+    <div class="grid">
+      <label>Datum<input type="date" id="mDate"></label>
+      <label>Von<input type="time" id="mFrom"></label>
+      <label>Bis<input type="time" id="mTo"></label>
+      <label>Pause (Min.)<input type="number" id="mPause" min="0" step="5" value="0"></label>
+      <label>Art
+        <select id="mKind"><option value="arbeit">Arbeit</option><option value="telefon">Telefonat</option><option value="fahrt">Fahrt</option></select>
+      </label>
+      <label id="mModeL">Arbeitsort
+        <select id="mMode"><option value="praesenz">Präsenz</option><option value="ho">Homeoffice</option></select>
+      </label>
+      <label id="mKmL" hidden>Kilometer<input type="number" id="mKm" min="0" step="1"></label>
+      <label class="wide">Tätigkeit<input id="mTask" list="taskList" maxlength="200" placeholder="z. B. Abstimmung"></label>
+    </div>
+    <div class="err" id="mErr"></div>
+    <div class="formbtns">
+      <button class="go dark" id="mSave">Eintrag speichern</button>
+      <button class="ghost" id="mCancel" hidden>Abbrechen</button>
+    </div>
+  </details>
+
+  <details class="box syncbox" id="syncBox">
+    <summary>Abgleich MacBook ↔ Handy (Dropbox)</summary>
+    <p id="dbxState">Nicht verbunden – Einträge liegen nur auf diesem Gerät.</p>
+    <div class="grid" id="dbxKeyRow">
+      <label class="wide">Dropbox-App-Key<input id="dbxKey" autocomplete="off" spellcheck="false" placeholder="z. B. abc123xyz"></label>
+    </div>
+    <div class="formbtns">
+      <button class="go dark" id="dbxConnect">Mit Dropbox verbinden</button>
+      <button class="ghost" id="dbxSyncNow" hidden>Jetzt abgleichen</button>
+      <button class="ghost" id="dbxDisconnect" hidden>Trennen</button>
+    </div>
+    <div class="err" id="dbxErr"></div>
+    <p>Datensicherung: Alle Einträge als Datei speichern oder eine Sicherung/Übernahme-Datei einlesen. Beim Einlesen werden Einträge zusammengeführt, nichts wird gelöscht.</p>
+    <div class="formbtns">
+      <button class="ghost" id="backupOut">Sicherung speichern</button>
+      <button class="ghost" id="backupIn">Sicherung / Übernahme einlesen</button>
+      <input type="file" id="backupFile" accept="application/json,.json" hidden>
+    </div>
+    <div class="ok" id="backupOk"></div>
+  </details>
+
+  <details class="box" id="settings">
+    <summary>Einstellungen</summary>
+    <div class="grid">
+      <label>Stundensatz Präsenz (€)<input type="number" id="sRatePr" min="0" step="0.5" placeholder="z. B. 85"></label>
+      <label>Stundensatz Homeoffice (€)<input type="number" id="sRateHo" min="0" step="0.5" placeholder="z. B. 75"></label>
+      <label>Stundensatz Fahrt (€)<input type="number" id="sRateFa" min="0" step="0.5" placeholder="z. B. 40"></label>
+      <label>Kilometerpauschale (€/km)<input type="number" id="sRateKm" min="0" step="0.01" placeholder="z. B. 0,30"></label>
+      <label>Abrechnung runden
+        <select id="sRound">
+          <option value="0">Nicht runden</option>
+          <option value="5">Auf 5 Min. aufrunden</option>
+          <option value="10">Auf 10 Min. aufrunden</option>
+          <option value="15">Auf 15 Min. aufrunden</option>
+          <option value="30">Auf 30 Min. aufrunden</option>
+        </select>
+      </label>
+      <label>Name auf dem Stundenzettel<input id="sName" maxlength="80" placeholder="Vor- und Nachname"></label>
+      <label>Auftraggeber<input id="sClient" maxlength="80" placeholder="z. B. BR Events"></label>
+      <div class="wide autobox">
+        <label class="chk"><input type="checkbox" id="sAuto"> Bei Präsenz automatisch Hin- und Rückfahrt eintragen</label>
+        <div class="grid">
+          <label class="wide">Strecke<input id="sRoute" maxlength="120" placeholder="z. B. Zuhause – Büro"></label>
+          <label>Fahrzeit je Weg (Min.)<input type="number" id="sAutoMin" min="1" step="1"></label>
+          <label>Kilometer je Weg<input type="number" id="sAutoKm" min="0" step="0.1"></label>
+        </div>
+      </div>
+      <label class="wide">Feste Tätigkeiten (eine pro Zeile)<textarea id="sTasks"></textarea></label>
+    </div>
+    <div class="ok" id="sOk"></div>
+    <button class="go dark" id="sSave">Einstellungen speichern</button>
+  </details>
+  <datalist id="taskList"></datalist>
+</main>
+<script src="config.js"></script>
+<script src="vendor/jspdf.umd.min.js"></script>
+<script src="sync.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
