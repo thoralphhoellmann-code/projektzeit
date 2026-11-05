@@ -1,5 +1,5 @@
 /* Offline-Unterstützung: App-Dateien zwischenspeichern, online immer die neueste Version laden. */
-const CACHE = "projektzeit-v2";
+const CACHE = "projektzeit-v3";
 const ASSETS = ["./", "index.html", "app.js", "sync.js", "config.js", "vendor/jspdf.umd.min.js",
   "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/icon-maskable-512.png"];
 

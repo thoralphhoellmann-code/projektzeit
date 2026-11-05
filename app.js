@@ -19,7 +19,8 @@
   const DEFAULTS = {
     ratePr: 0, rateHo: 0, rateFa: 0, rateKm: 0, round: 0, name: "", client: "BR Events",
     autoFahrt: false, autoRoute: "", autoMin: 15, autoKm: 0,
-    tasks: ["Planung", "Vor-Ort-Termin", "Abstimmung", "Technik", "Dokumentation"]
+    tasks: ["Planung", "Vor-Ort-Termin", "Abstimmung", "Technik", "Dokumentation"],
+    showAmounts: false
   };
   const SYNC_FILE = "/projektzeit.json";
   const LS_STATE = "pz_state";
@@ -412,6 +413,7 @@
     $("sRateFa").value = settings.rateFa || ""; $("sRateKm").value = settings.rateKm || "";
     $("sRound").value = String(settings.round || 0); $("sName").value = settings.name || "";
     $("sClient").value = settings.client || "";
+    $("sAmounts").checked = !!settings.showAmounts;
     $("sAuto").checked = !!settings.autoFahrt; $("sRoute").value = settings.autoRoute || "";
     $("sAutoMin").value = settings.autoMin || ""; $("sAutoKm").value = settings.autoKm || "";
     $("sTasks").value = (settings.tasks || []).join("\n");
@@ -425,6 +427,7 @@
       round: Number($("sRound").value) || 0,
       name: $("sName").value.trim(),
       client: $("sClient").value.trim(),
+      showAmounts: $("sAmounts").checked,
       autoFahrt: $("sAuto").checked,
       autoRoute: $("sRoute").value.trim(),
       autoMin: Math.max(1, Math.round(Number($("sAutoMin").value) || 30)),
@@ -662,22 +665,24 @@
     $("xErr").textContent = "";
     const list = billableEntries().slice().reverse();
     const q = s => '"' + String(s).replace(/"/g, '""') + '"';
-    const rows = [["Datum", "Von", "Bis", "Pause (Min.)", "Dauer (Std.)", "Abgerechnet (Std.)", "Art", "Arbeitsort", "Kilometer", "Tätigkeit", "Betrag (EUR)"].map(q).join(";")];
+    const money = !!settings.showAmounts;
+    const cut = r => money ? r : r.slice(0, 10);
+    const rows = [cut(["Datum", "Von", "Bis", "Pause (Min.)", "Dauer (Std.)", "Abgerechnet (Std.)", "Art", "Arbeitsort", "Kilometer", "Tätigkeit", "Betrag (EUR)"]).map(q).join(";")];
     list.forEach(e => {
       const b = billMin(e.minutes);
-      rows.push([dDE(e.date), e.start, e.end, e.pause || 0, dec(e.minutes / 60), dec(b / 60),
-        KINDS[kindOf(e)], kindOf(e) === "fahrt" ? "" : MODES[e.mode] || e.mode, e.km || "", e.task || "", dec(eurOfExport(e))].map(q).join(";"));
+      rows.push(cut([dDE(e.date), e.start, e.end, e.pause || 0, dec(e.minutes / 60), dec(b / 60),
+        KINDS[kindOf(e)], kindOf(e) === "fahrt" ? "" : MODES[e.mode] || e.mode, e.km || "", e.task || "", dec(eurOfExport(e))]).map(q).join(";"));
     });
     const S = exportSums(list);
     rows.push("");
-    const sr = (l, a, b, m) => rows.push([q(l), "", "", "", q(dec(a / 60)), q(dec(b / 60)), "", "", "", "", q(dec(m))].join(";"));
+    const sr = (l, a, b, m) => rows.push(cut([q(l), "", "", "", q(dec(a / 60)), q(dec(b / 60)), "", "", "", "", q(dec(m))]).join(";"));
     sr("Summe Präsenz (inkl. Fahrtzeit)", S.pr, S.bpr, S.eurPr);
     sr("Summe Homeoffice", S.ho, S.bho, S.eurHo);
     sr("Gesamt Arbeitszeit", S.all, S.ball, S.eurAll);
     if (S.tel) rows.push([q("Davon Telefonate"), "", "", "", q(dec(S.tel / 60))].join(";"));
     if (S.trips) rows.push([q("Anzahl Fahrten"), "", "", "", "", "", "", "", q(S.trips)].join(";"));
     if (S.km) rows.push([q("Gefahrene Kilometer"), "", "", "", "", "", "", "", q(S.km.toLocaleString("de-DE"))].join(";"));
-    if (S.km && rateKm()) rows.push([q("Kilometergeld (EUR)"), "", "", "", "", "", "", "", "", "", q(dec(S.eurKm))].join(";"));
+    if (money && S.km && rateKm()) rows.push([q("Kilometergeld (EUR)"), "", "", "", "", "", "", "", "", "", q(dec(S.eurKm))].join(";"));
     downloadBlob(fileBase() + ".csv", new Blob(["﻿" + rows.join("\r\n")], { type: "text/csv;charset=utf-8" }));
   });
 
@@ -685,7 +690,7 @@
     const r = range();
     const list = billableEntries().slice().reverse();
     const S = exportSums(list);
-    const rates = hasRates();
+    const rates = hasRates() && !!settings.showAmounts;
     const doc = new window.jspdf.jsPDF({ unit: "mm", format: "a4" });
     const L = 15, R = 195;
     let y = 20;
@@ -746,7 +751,7 @@
     if (S.tel) { doc.setFont("helvetica", "normal"); doc.setFontSize(8.5); doc.text("Davon Telefonate: " + dec(S.tel / 60) + " Std.", 101, y); y += 5; }
     if (S.trips) {
       doc.setFont("helvetica", "normal"); doc.setFontSize(8.5);
-      doc.text(S.trips + " Fahrt" + (S.trips === 1 ? "" : "en") + " · " + S.km.toLocaleString("de-DE") + " km" + (rateKm() ? " · Kilometergeld " + dec(S.eurKm) + " EUR" : ""), 101, y);
+      doc.text(S.trips + " Fahrt" + (S.trips === 1 ? "" : "en") + " · " + S.km.toLocaleString("de-DE") + " km" + (rates && rateKm() ? " · Kilometergeld " + dec(S.eurKm) + " EUR" : ""), 101, y);
       y += 5;
     }
     if (rates) {
